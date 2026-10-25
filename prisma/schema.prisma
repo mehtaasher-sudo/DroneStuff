@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Mission {
+  id          String      @id @default(cuid())
+  name        String
+  /// GeoJSON Polygon of the survey / operating area
+  areaGeoJson String?
+  /// JSON array of Waypoint (alt_agl in feet AGL)
+  waypoints   String
+  altAglFt    Int
+  pattern     String?
+  notes       String?
+  laancStatus String?
+  laancId     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  flights     FlightLog[]
+}
+
+model FlightLog {
+  id            String    @id @default(cuid())
+  missionId     String?
+  mission       Mission?  @relation(fields: [missionId], references: [id])
+  startedAt     DateTime  @default(now())
+  durationSec   Int?
+  maxAltAglFt   Int?
+  batteryCycles Int?
+  laancId       String?
+  /// JSON array of TelemetryFrame
+  track         String?
+  notes         String?
+}
+
+model ChecklistRun {
+  id        String   @id @default(cuid())
+  missionId String?
+  /// JSON map of itemId -> checked
+  items     String
+  /// JSON map of FRAT factor -> score
+  frat      String?
+  ready     Boolean
+  createdAt DateTime @default(now())
+}
