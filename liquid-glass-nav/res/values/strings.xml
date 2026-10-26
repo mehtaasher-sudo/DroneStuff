@@ -2,5 +2,5 @@
 <resources>
     <string name="app_name">Liquid Glass Nav</string>
     <string name="service_label">Liquid Glass Nav</string>
-    <string name="service_description">Draws a floating Liquid Glass navigation bubble (Back, Home, Recents) over every app. It reads the window list only to hide the bubble while the keyboard is open. No data is collected or sent anywhere.</string>
+    <string name="service_description">Turns the bottom menu bar of your apps (tabs like Home, Search, Profile) into a floating Liquid Glass bubble. It reads the on-screen buttons of the bar and copies their icons from a screenshot of the app, and it can optionally show floating Back / Home / Recents buttons. Nothing is stored or sent anywhere; the app has no internet permission.</string>
 </resources>

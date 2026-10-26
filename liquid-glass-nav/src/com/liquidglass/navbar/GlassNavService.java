@@ -19,8 +19,8 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * Accessibility service that floats the Liquid Glass bubble above every app and maps
- * its buttons to system global actions (Back, Home, Recents).
+ * Accessibility service behind both features: Liquid Glass app menu bars
+ * ({@link MenuGlassController}) and the optional floating Back / Home / Recents bubble.
  */
 public class GlassNavService extends AccessibilityService
         implements SharedPreferences.OnSharedPreferenceChangeListener, GlassPillView.Listener {
@@ -28,6 +28,7 @@ public class GlassNavService extends AccessibilityService
     private static final int BLUR_RADIUS_DP = 22;
 
     private SharedPreferences prefs;
+    private MenuGlassController menu;
     private Dialog dialog;
     private GlassPillView pill;
     private boolean imeVisible;
@@ -36,7 +37,21 @@ public class GlassNavService extends AccessibilityService
     protected void onServiceConnected() {
         prefs = Prefs.get(this);
         prefs.registerOnSharedPreferenceChangeListener(this);
-        createOverlay();
+        if (Build.VERSION.SDK_INT >= 30) {
+            menu = new MenuGlassController(this, prefs);
+        }
+        applyFeatures();
+    }
+
+    private void applyFeatures() {
+        if (menu != null) menu.setEnabled(prefs.getBoolean(Prefs.MENU_ENABLED, true));
+        boolean nav = prefs.getBoolean(Prefs.NAV_ENABLED, false);
+        if (nav && dialog == null) {
+            createOverlay();
+        } else if (!nav && dialog != null) {
+            dialog.dismiss();
+            dialog = null;
+        }
     }
 
     private void createOverlay() {
@@ -118,6 +133,9 @@ public class GlassNavService extends AccessibilityService
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sp, String key) {
+        if (Prefs.SEEN.equals(key)) return;
+        if (Prefs.EXCLUDED.equals(key) && menu != null) menu.refresh();
+        applyFeatures();
         applySettings();
         if (Prefs.HIDE_ON_IME.equals(key)) updateVisibility();
     }
@@ -126,11 +144,13 @@ public class GlassNavService extends AccessibilityService
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         applySettings();
+        if (menu != null) menu.onConfigChanged();
     }
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOWS_CHANGED) return;
+        if (menu != null) menu.onEvent(event);
+        if (event.getEventType() != AccessibilityEvent.TYPE_WINDOWS_CHANGED || dialog == null) return;
         boolean ime = false;
         List<AccessibilityWindowInfo> windows = getWindows();
         for (AccessibilityWindowInfo info : windows) {
@@ -194,6 +214,7 @@ public class GlassNavService extends AccessibilityService
     @Override
     public void onDestroy() {
         if (prefs != null) prefs.unregisterOnSharedPreferenceChangeListener(this);
+        if (menu != null) menu.destroy();
         if (dialog != null) {
             dialog.dismiss();
             dialog = null;
